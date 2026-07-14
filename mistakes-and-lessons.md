@@ -99,3 +99,14 @@ Added a USB-to-Ethernet adapter as a second physical NIC dedicated entirely to t
 - Recognizing the difference between a misconfiguration and an architecture constraint saves significant troubleshooting time
 - Dedicated management interfaces are standard practice in real networks for exactly this reason — separation of management plane from data plane
 - Sometimes the right fix is adding hardware, not changing configuration
+
+### 7/14/26
+## Mistakes & Lessons
+ 
+### Don't trust the first ping after a pfSense reboot
+ 
+Right after boot I pinged 8.8.8.8 and the latency was all over the place — spiked up to 8.8 seconds at one point. My first instinct was that something was wrong with the WAN link or that I had bufferbloat.
+ 
+Let it keep running and it settled into ~18ms after about a minute. Ran it again clean (`ping -c 20`) and got 0% loss, stddev under 1ms. So it wasn't the connection — it was just the WAN/DHCP still settling right after boot.
+ 
+Lesson: give it a minute after reboot before judging latency, and always re-test with a bounded ping (`-c N`) instead of eyeballing a live scroll. The first burst after a fresh boot isn't a reliable read on link quality.
