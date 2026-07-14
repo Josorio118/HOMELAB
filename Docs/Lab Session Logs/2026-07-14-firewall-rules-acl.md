@@ -33,6 +33,11 @@ Re-tested: 0% loss again, but only for ICMP — everything else stays blocked by
 Captured live on the laptop's own interface, filtered to `icmp && ip.addr==192.168.10.1` — clean echo request/reply pairs the whole way through, confirming the permit rule takes effect exactly where expected.
  
 ![Wireshark - ICMP verified]
+<img width="626" height="329" alt="Wireshark Capture ICMP" src="https://github.com/user-attachments/assets/4c5daff6-5cfd-41f5-8e1a-095246b7ac7d" />
+
+
+
+
 
 
  
