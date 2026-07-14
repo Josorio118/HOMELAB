@@ -109,7 +109,7 @@ Let it keep running and it settled into ~18ms after about a minute. Ran it again
  
 Lesson: give it a minute after reboot before judging latency, and always re-test with a bounded ping (`-c N`) instead of eyeballing a live scroll. The first burst after a fresh boot isn't a reliable read on link quality.
 
-### 6. pfSense's packet capture GUI isn't reliable for real-time verification
+## 6. pfSense's packet capture GUI isn't reliable for real-time verification
  
 I tried using Diagnostics → Packet Capture in pfSense to verify the block/permit rules — start a capture on the VLAN10_USERS interface, ping from VLAN 20, stop, view. Kept coming back empty even when I knew traffic should be hitting that interface.
  
@@ -119,7 +119,7 @@ Switched to running Wireshark directly on the iMac, capturing on the USB adapter
  
 Lesson: for quick verification, capture directly on the physical interface carrying the traffic in Wireshark rather than relying on pfSense's built-in packet capture page. It's fine for a controlled scheduled capture, but not great for "watch this happen live" testing.
  
-### 7. A rule named "allow to internet" isn't the same as a rule scoped to the internet
+## 7. A rule named "allow to internet" isn't the same as a rule scoped to the internet
  
 Found this by accident during the baseline test — the existing "Allow VLAN 20 to internet" rule had destination set to `*` (any), which doesn't distinguish LAN subnets from actual internet-bound traffic. So it was quietly allowing VLAN 20 → VLAN 10 the whole time, even though nobody intended that.
  
