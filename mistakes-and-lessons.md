@@ -101,6 +101,7 @@ Added a USB-to-Ethernet adapter as a second physical NIC dedicated entirely to t
 - Sometimes the right fix is adding hardware, not changing configuration
 
 ### 7/14/26
+
 ## 5. Don't trust the first ping after a pfSense reboot
  
 Right after boot I pinged 8.8.8.8 and the latency was all over the place — spiked up to 8.8 seconds at one point. My first instinct was that something was wrong with the WAN link.
