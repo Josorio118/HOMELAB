@@ -100,11 +100,27 @@ Added a USB-to-Ethernet adapter as a second physical NIC dedicated entirely to t
 - Dedicated management interfaces are standard practice in real networks for exactly this reason — separation of management plane from data plane
 - Sometimes the right fix is adding hardware, not changing configuration
 
-## 5. Don't trust the first ping after a pfSense reboot
 ### 7/14/26
+## 5. Don't trust the first ping after a pfSense reboot
  
 Right after boot I pinged 8.8.8.8 and the latency was all over the place — spiked up to 8.8 seconds at one point. My first instinct was that something was wrong with the WAN link.
  
 Let it keep running and it settled into ~18ms after about a minute. Ran it again clean (`ping -c 20`) and got 0% loss, stddev under 1ms. So it wasn't the connection — it was just the WAN/DHCP still settling right after boot.
  
 Lesson: give it a minute after reboot before judging latency, and always re-test with a bounded ping (`-c N`) instead of eyeballing a live scroll. The first burst after a fresh boot isn't a reliable read on link quality.
+
+### 6. pfSense's packet capture GUI isn't reliable for real-time verification
+ 
+I tried using Diagnostics → Packet Capture in pfSense to verify the block/permit rules — start a capture on the VLAN10_USERS interface, ping from VLAN 20, stop, view. Kept coming back empty even when I knew traffic should be hitting that interface.
+ 
+Turns out the Start/Stop/View workflow in the GUI doesn't make it obvious whether the capture is actually running, or whether "View" is showing a fresh result vs. a stale one from before. Redid it several times with a bounded packet count and it still came back empty.
+ 
+Switched to running Wireshark directly on the iMac, capturing on the USB adapter — the same physical NIC that's bridged into VMware Fusion as pfSense's LAN trunk (Port 5). This worked instantly and showed all VLAN traffic crossing that link in real time, since it's capturing right at the trunk itself rather than going through pfSense's own tooling.
+ 
+Lesson: for quick verification, capture directly on the physical interface carrying the traffic in Wireshark rather than relying on pfSense's built-in packet capture page. It's fine for a controlled scheduled capture, but not great for "watch this happen live" testing.
+ 
+### 7. A rule named "allow to internet" isn't the same as a rule scoped to the internet
+ 
+Found this by accident during the baseline test — the existing "Allow VLAN 20 to internet" rule had destination set to `*` (any), which doesn't distinguish LAN subnets from actual internet-bound traffic. So it was quietly allowing VLAN 20 → VLAN 10 the whole time, even though nobody intended that.
+ 
+Lesson: a rule's description/name doesn't enforce its actual scope. If you want a rule to only apply to internet-bound traffic, the destination needs to explicitly exclude local subnets (or use an alias/negation), not just rely on the label matching intent.
