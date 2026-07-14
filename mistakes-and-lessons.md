@@ -105,7 +105,7 @@ Added a USB-to-Ethernet adapter as a second physical NIC dedicated entirely to t
  
 ### Don't trust the first ping after a pfSense reboot
  
-Right after boot I pinged 8.8.8.8 and the latency was all over the place — spiked up to 8.8 seconds at one point. My first instinct was that something was wrong with the WAN link or that I had bufferbloat.
+Right after boot I pinged 8.8.8.8 and the latency was all over the place — spiked up to 8.8 seconds at one point. My first instinct was that something was wrong with the WAN link.
  
 Let it keep running and it settled into ~18ms after about a minute. Ran it again clean (`ping -c 20`) and got 0% loss, stddev under 1ms. So it wasn't the connection — it was just the WAN/DHCP still settling right after boot.
  
