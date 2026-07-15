@@ -10,6 +10,8 @@ First tried `show lldp config` for a different exercise and hit a wall — "Inva
 show port-security
 ```
 All ports showed learn-mode: continuous, action: none — factory default.
+<img width="3158" height="1813" alt="Port Security Table" src="https://github.com/user-attachments/assets/f0f0a7ad-9f9f-43dd-bae9-6ceaf5f2db8c" />
+
  
 ### Locking down Port 10
  
@@ -23,6 +25,7 @@ Verified:
 show port-security 10
 ```
 Port 10 — Learn Mode: Static, Address Limit: 1, Action: None, Authorized Addresses: 5c2886-2b5029 (my laptop, connected via the dock on Port 10).
+<img width="3679" height="1957" alt="Port 10 Security" src="https://github.com/user-attachments/assets/d250db3e-d829-4f34-99ba-ab3cfaf0c37a" />
  
 ### First attempt at a violation test — dead end
  
@@ -44,7 +47,9 @@ Still only showed the original authorized MAC. The new adapter's MAC never got l
 ```
 show interfaces
 ```
-Port 10 showed **Intrusion Alert: Yes** — the only port flagged out of all of them.
+Port 10 showed **Intrusion Alert: Yes** — the only port flagged out of all of them.[Instrusion Alert.png.zip](https://github.com/user-attachments/files/30061920/Instrusion.Alert.png.zip)
+
+
  
 Ran a live Wireshark capture on the trunk (iMac's USB adapter) during this test, filtered to `bootp`. Zero packets from the unauthorized device showed up — not even a DHCP Discover. That confirmed the block happens at ingress on Port 10 itself, before the frame is ever forwarded across the trunk.
  
