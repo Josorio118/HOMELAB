@@ -6,7 +6,7 @@ Moved the laptop to Port 11 (VLAN 20, access mode), confirmed it pulled 192.168.
  
 ### Baseline
  
-Ping'd 192.168.10.1 (VLAN10_USERS gateway) from the VLAN 20 client. 10/10 packets, 0% loss. Turns out the existing "Allow VLAN 20 to internet" rule had destination set to any, which doesn't exclude LAN subnets — so it was letting inter-VLAN traffic through even though the rule was only meant to allow internet access.
+Ping 192.168.10.1 (VLAN10_USERS gateway) from the VLAN 20 client. 10/10 packets, 0% loss. Turns out the existing "Allow VLAN 20 to internet" rule had destination set to any, which doesn't exclude LAN subnets — so it was letting inter-VLAN traffic through even though the rule was only meant to allow internet access.
  
 ### Block rule
  
