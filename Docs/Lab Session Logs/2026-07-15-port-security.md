@@ -47,7 +47,8 @@ Still only showed the original authorized MAC. The new adapter's MAC never got l
 ```
 show interfaces
 ```
-Port 10 showed **Intrusion Alert: Yes** — the only port flagged out of all of them.[Instrusion Alert.png.zip](https://github.com/user-attachments/files/30061920/Instrusion.Alert.png.zip)
+Port 10 showed **Intrusion Alert: Yes** — the only port flagged out of all of them.<img width="3756" height="1973" alt="Instrusion" src="https://github.com/user-attachments/assets/b7320fbc-1271-4fc6-891c-93a5177033b5" />
+
 
 
  
