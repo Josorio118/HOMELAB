@@ -126,13 +126,14 @@ Found this by accident during the baseline test — the existing "Allow VLAN 20 
  
 Lesson: a rule's description/name doesn't enforce its actual scope. If you want a rule to only apply to internet-bound traffic, the destination needs to explicitly exclude local subnets (or use an alias/negation), not just rely on the label matching intent.
 
-### 8. This switch's firmware is too old for LLDP
+### 7/15/26
+## 8. This switch's firmware is too old for LLDP
  
 Tried `show lldp config` on the ProCurve and got "Invalid input: lldp" even in config mode, not just a syntax issue, the command doesn't exist at all. Checked `show version` and the firmware is dated Oct 2000 (F.01.08). LLDP (802.1AB) wasn't ratified until 2005, so there's no version of this switch's software that would ever support it.
  
 Lesson: check `show version` before assuming a missing command is a syntax problem. Sometimes it's a hard hardware/firmware ceiling, not something you can work around with the right syntax. LLDP goes on the list of things that need the second (newer) switch.
  
-### 9. USB dock Ethernet adapters have their own fixed MAC — swapping hosts doesn't change what the switch sees
+## 9. USB dock Ethernet adapters have their own fixed MAC — swapping hosts doesn't change what the switch sees
  
 Tried to trigger a port security violation by connecting a different device (phone instead of laptop) to the same dock. The switch kept showing the same authorized MAC no matter what was plugged into the dock's USB-C port.
  
@@ -140,7 +141,7 @@ Turns out the dock's Ethernet adapter has its own MAC address baked into its own
  
 Lesson: to genuinely test device-level network identity (MAC spoofing, port security, etc.), you need to either use a device with native Ethernet, or swap the actual adapter itself; not just what's connected to the adapter. Also relatedly: `ifconfig ether` on macOS doesn't work on every adapter; mine (a generic USB dock chipset) rejected every attempt to change its MAC address, with different errors depending on interface state.
  
-### 10. "Action: None" on ProCurve port security doesn't mean no enforcement
+## 10. "Action: None" on ProCurve port security doesn't mean no enforcement
  
 Assumed that with Action set to None, port security wouldn't actually block anything — figured it'd just log or do nothing at all. Tested it by connecting an unauthorized device (different adapter, different MAC) to a locked port.
  
