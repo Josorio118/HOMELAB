@@ -1,0 +1,66 @@
+## Goal
+Get a real dashboard going so I can actually see interface health on the ProCurve and pfSense instead of just SSHing in and eyeballing `ifconfig`/`show interfaces` every time.
+ 
+## What I did
+ 
+**Homebrew install (iMac, Intel, macOS 13.7)**
+- Installed Homebrew from scratch on the iMac -> this box didn't have it yet
+- Xcode Command Line Tools + Homebrew clone took a while (background CPU load spiked pfSense's VM briefly, saw a `swap_pager: indefinite wait buffer` warning on the console -> turned out to just be host CPU contention from the Homebrew build, not a real fault)
+- Installed `net-snmp` via brew -> it's keg-only on macOS since Apple ships an ancient version already, so `snmpwalk -V` still shows the system one (5.6.2.1) unless I explicitly prepend `/usr/local/opt/net-snmp/bin` to PATH
+**Docker via Colima (not Docker Desktop)**
+- Docker Desktop straight up refuses to install on macOS 13 (requires Sonoma+) -> hard blocker, no workaround
+- Used Colima instead: `brew install docker docker-compose colima` then `colima start`
+- Colima spins up a small Linux VM (macOS Virtualization Framework) to run the actual Docker daemon -> totally normal, not sketchy, just how you get Docker on older macOS
+**LibreNMS deployment**
+- Official docker-compose URLs from the LibreNMS GitHub repo have moved -> old `examples/docker-compose.yml` path 404s now. Correct path is `examples/compose/` and the files are `compose.yml`, `.env`, `librenms.env`, and `msmtpd.env` (four files, not two)
+- Set a real MySQL password (not the example `asupersecretpassword`) and set `TZ=America/New_York`
+## The actual bug: MariaDB case-sensitivity crash loop
+ 
+`librenms_db` container kept crash-looping on boot with:
+```
+ERROR: The server option 'lower_case_table_names' is configured to use case sensitive
+table names but the data directory resides on a case-insensitive file system.
+```
+ 
+**Root cause:** `compose.yml` bind-mounts `./db:/var/lib/mysql` -> a folder on the actual macOS disk via Colima's virtiofs passthrough. macOS's default filesystem (APFS) is case-insensitive, but MariaDB's config forces `--lower-case-table-names=0`, which requires case-sensitive storage. Straight up incompatible.
+ 
+**Fix:** swap the bind mount for a Docker named volume instead, since named volumes live inside Colima's Linux VM (real case-sensitive ext4), not on the host disk.
+ 
+In `compose.yml`, under the `db` service:
+```yaml
+volumes:
+  - "librenms_db_data:/var/lib/mysql"
+```
+And at the bottom of the file (flush-left, sibling of `services:`):
+```yaml
+volumes:
+  librenms_db_data:
+```
+ 
+Then `docker compose down && docker compose up -d`. Fixed it immediately -> db came up clean and stayed up.
+ 
+## Other snags along the way
+ 
+- First LibreNMS boot attempt hit the DB before it was ready ("Waiting 60s... ERROR: Failed to connect to database on db") -> just a race condition on first start, resolved itself on restart once the DB container was actually healthy
+- Got a `403 THIS SHOULD ONLY BE CALLED DURING INSTALL` hitting `/install` directly -> LibreNMS didn't route to the setup wizard automatically, so I created the first admin account via CLI instead: `docker exec -it librenms lnms user:add -r admin -p 'password' admin`
+- Password rejected multiple times with "given password has appeared in a data leak" -> LibreNMS checks new passwords against breach databases. Had to generate a genuinely random one (`openssl rand -base64 16`) to get past it
+## SNMP on the ProCurve
+ 
+Discovered via `show management` that **every VLAN interface on the switch had no IP configured** ("Disabled" across the board) -> meaning the switch itself was never actually reachable over the network this whole project, only via console. Assigned it an IP on VLAN 99 (MGMT):
+```
+vlan 99
+ip address 192.168.99.27 255.255.255.0
+```
+Confirmed reachable via ping, then added it to LibreNMS with SNMP v2c / community `public`. Pulled real VLAN/port data immediately and it matched my documented topology exactly (trunk on port 5, PFSENSE_LAN untagged on port 4).
+ 
+## pfSense + alerting
+ 
+- Added pfSense (192.168.99.1) as a second device the same way -> SNMP was already enabled from earlier in the project
+- Created default alert rules (device down, interface down, port status, sensor thresholds, etc.) via LibreNMS's built-in "create default alert rules" button
+- Default rules ship with no transport attached ("notifications suppressed") -> had to add one manually
+- Set up a Discord webhook transport instead of email/SMTP -> way less setup friction than configuring the `msmtpd` relay with real credentials. Created a private Discord server, added a webhook to a channel, pasted the URL into LibreNMS's Discord transport config, flipped "Default Alert" to ON so it applies automatically
+- Tested with LibreNMS's built-in transport test button -> test alert landed in Discord in ~11s, formatted correctly
+## Result
+ 
+Working dashboard with both devices polling on SNMP, real VLAN/interface visibility, event logging (caught an actual em0 link flap from earlier in the session, retroactively, in the Eventlog), and live alerting to Discord.
+ 
