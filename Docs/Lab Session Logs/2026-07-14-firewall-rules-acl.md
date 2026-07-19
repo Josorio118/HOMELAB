@@ -14,7 +14,7 @@ Added a block rule on the VLAN20_TEST interface: block, any protocol, source VLA
  
 Re-tested: 100% packet loss.
  
-![Block rule - 100% packet loss]<img width="1940" height="1481" alt="Terminal- block rule in effect" src="https://github.com/user-attachments/assets/03fcdcec-6bb4-4e56-9e47-26d0dccf97b4" />
+![Block rule - 100% packet loss]
 
  
 Rule order confirmed working — first match wins.
@@ -25,14 +25,14 @@ Added a permit rule above the block rule: pass, ICMP, any subtype, same source/d
  
 Re-tested: 0% loss again, but only for ICMP — everything else stays blocked by the rule below it.
  
-![Permit rule - 0% packet loss]<img width="2948" height="2071" alt="Terminal Permit Rule in Effect" src="https://github.com/user-attachments/assets/f2fd8a93-6185-4e38-ace5-746476c6e332" />
+![Permit rule - 0% packet loss]
 
  
 ### Verification in Wireshark
  
 Captured live on the laptop's own interface, filtered to `icmp && ip.addr==192.168.10.1` — clean echo request/reply pairs the whole way through, confirming the permit rule takes effect exactly where expected.
  
-![Wireshark - ICMP verified]<img width="626" height="329" alt="Wireshark Capture ICMP" src="https://github.com/user-attachments/assets/4c5daff6-5cfd-41f5-8e1a-095246b7ac7d" />
+![Wireshark - ICMP verified]<
 
 
 
