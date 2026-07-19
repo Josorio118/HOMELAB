@@ -25,7 +25,7 @@ Verified:
 show port-security 10
 ```
 Port 10 — Learn Mode: Static, Address Limit: 1, Action: None, Authorized Addresses: xx:xxxx-xxxxxx (my laptop, connected via the dock on Port 10).
-<img width="3679" height="1957" alt="Port 10 Security" src="https://github.com/user-attachments/assets/d250db3e-d829-4f34-99ba-ab3cfaf0c37a" />
+
  
 ### First attempt at a violation test — dead end
  
