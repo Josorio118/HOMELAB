@@ -148,3 +148,46 @@ Assumed that with Action set to None, port security wouldn't actually block anyt
 The device got no DHCP lease (fell back to a self-assigned 169.254 address), the switch's MAC table for that port never changed, and `show interfaces` showed Intrusion Alert: Yes for that port specifically. A live Wireshark capture on the trunk showed zero packets from the device — confirming the block happens right at ingress on the port, before the frame is even forwarded anywhere.
  
 Lesson: on ProCurve, "Action" controls the response to a violation (port disable, trap, alarm), not whether the violation is actually blocked. The blocking is automatic and happens regardless of Action, as long as learn-mode and address-limit are configured. Don't assume "Action: None" means "no security," it means "no extra response."
+### 2026-07-19
+## 11
+ 
+### MariaDB won't start in Docker on macOS if you bind-mount the data directory
+ 
+Kept getting `librenms_db` stuck in a crash loop. Logs said:
+```
+ERROR: The server option 'lower_case_table_names' is configured to use case sensitive
+table names but the data directory resides on a case-insensitive file system.
+```
+ 
+Root cause: `compose.yml` bind-mounts `./db:/var/lib/mysql`, which puts the DB files on the actual macOS disk through Colima's virtiofs passthrough. APFS (macOS's filesystem) is case-insensitive, but MariaDB's config forces `--lower-case-table-names=0`, which needs case-sensitive storage. Straight up incompatible, no amount of retrying fixed it.
+ 
+Fix: swap the bind mount for a Docker named volume instead, since named volumes live inside Colima's Linux VM (real case-sensitive ext4), not on the host disk.
+ 
+```yaml
+    volumes:
+      - "librenms_db_data:/var/lib/mysql"
+```
+and at the bottom of the file:
+```yaml
+volumes:
+  librenms_db_data:
+```
+ 
+`docker compose down && docker compose up -d` after that and it came up clean on the first try.
+ 
+## 12
+ 
+### Docker Desktop won't install on macOS 13, Colima is the real fix not a workaround
+ 
+Tried `brew install --cask docker-desktop` on the iMac and got a flat error -> Docker Desktop requires Sonoma (14) or newer, no way around it on macOS 13.7. Went with Colima instead (`brew install docker docker-compose colima` then `colima start`), which spins up a small Linux VM and gives you a real `docker`/`docker compose` CLI. Wasn't sure at first if this was some sketchy workaround, but it's a legit, actively maintained, Homebrew-official tool -> the standard recommendation for exactly this situation.
+ 
+## 13
+ 
+### Switch had no IP on any VLAN this whole time
+ 
+Went to add the ProCurve to LibreNMS and needed its management IP. Ran `show management` on the switch and every single VLAN showed "Disabled" under IP Config -> the switch never actually had a network-reachable address, only console/serial access this entire project. Assigned one on VLAN XX:
+```
+vlan XXX
+ip address 192.168.XXX.XXX 255.255.255.0
+```
+Lesson: don't assume SNMP/reachability problems are a firewall or community-string issue before confirming the device actually has an IP assigned on the interface you're trying to reach it on.
