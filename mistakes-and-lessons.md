@@ -191,3 +191,24 @@ vlan XXX
 ip address 192.168.XXX.XXX 255.255.255.0
 ```
 Lesson: don't assume SNMP/reachability problems are a firewall or community-string issue before confirming the device actually has an IP assigned on the interface you're trying to reach it on.
+
+### 2026-07-25
+## 14
+
+Killing a `screen` session by just closing the terminal window instead of a proper `Ctrl-A` `k` / exit can leave the serial port locked at the OS level. On macOS, `sudo screen` sessions are owned by root and won't show up in a plain `screen -ls` -> use `sudo screen -ls` to actually see them. Six of these had stacked up unnoticed across earlier sessions, and one was the actual cause of a `Resource busy` / `ioctl TIOCEXCL failed` error when trying to reconnect to the switch console.
+
+## 15
+
+Ports 25-26 on the ProCurve 2524 are the SFP transceiver slots, not standard copper ports -> they reject the standard `interface disable` syntax used on the other 24 ports. Exclude them from bulk port-range commands (e.g. `interface 1-4,6-9,12-24 disable`, not `1-26`).
+
+## 16
+
+Disabling a port on the switch (`Admin: down`) does not stop LibreNMS from polling and alerting on it. LibreNMS has a separate `Ignore alert tag` toggle per port (Device Settings -> Port Settings) that has to be explicitly set to ON for ports you've intentionally shut down -> otherwise a stale "port down" alert can sit open indefinitely and eventually deliver a delayed Discord notification once the queue reprocesses.
+
+## 17
+
+The ProCurve's `time` command sets the *local* clock, but the switch stores time internally and applies the configured timezone offset on top of whatever you enter. Setting the clock before setting the timezone means the displayed time will shift once the offset is applied afterward -> set `time timezone` first, then set the clock, not the other way around.
+
+## 18
+
+There is no `write memory` equivalent for the ProCurve's clock. `reload` or `boot` resets the time back to the January 1990 default regardless of any other saved config -> the clock has to be manually reset after every reboot/power cycle unless a working Timep source is configured. `ip timep dhcp` alone won't work unless the DHCP server is actually configured to hand out a Timep server address, and pfSense's NTP service isn't the same protocol as the ProCurve's Timep client.
