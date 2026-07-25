@@ -1,7 +1,7 @@
 # CCNA Home Lab — Study Journal & Lab Documentation
 
 > **HP ProCurve 2524 · pfSense CE 2.8.1 · VMware Fusion · Cisco Packet Tracer**
-> January – February 2026
+> January – July 2026
 
 A hands-on CCNA study lab built on real hardware and a virtualized firewall. This repo documents the full journey — physical setup, every major mistake, all configurations, and Packet Tracer labs — organized as a working reference and study log.
 
@@ -54,6 +54,8 @@ Port 3 (ISP uplink)     Port 4 (MGMT/VLAN 99)    Port 10/11 (VLAN 10/20)
 | Port 5 | 802.1Q Trunk — to pfSense USB Ethernet |
 | Port 10 | Access — VLAN 10 test device |
 | Port 11 | Access — VLAN 20 test device |
+| Ports 1-4, 6-9, 12-24 | Unused — administratively disabled |
+| Ports 25-26 | SFP transceiver slots — unpopulated |
 
 ### pfSense Interface Assignments
 
@@ -77,6 +79,12 @@ Port 3 (ISP uplink)     Port 4 (MGMT/VLAN 99)    Port 10/11 (VLAN 10/20)
 - ✅ pfSense GUI accessible at https://192.168.99.1
 - ✅ STP loop test — loop blocked correctly, convergence observed
 - ✅ Wireshark verified — BPDUs, ARP, TCP sessions, VLAN-tagged traffic
+- ✅ Port security — port security lab completed on switch access ports
+- ✅ Firewall rules / ACLs — VLAN20_TEST rules configured on pfSense
+- ✅ SNMP monitoring — LibreNMS deployed via Docker/Colima, polling pfSense and switch
+- ✅ SNMP trap forwarding — switch traps to LibreNMS, verified via live port flap test
+- ✅ Discord alerting — LibreNMS alert rules wired to Discord webhook, ignore-tags tuned for disabled ports
+- ✅ Unused switch ports — administratively disabled to reduce VLAN-hopping surface
 
 ---
 
@@ -110,6 +118,10 @@ ccna-homelab/
 | Feb 1 | Router-on-a-stick full build | 802.1Q trunk, inter-VLAN routing, DHCP per VLAN |
 | Feb 1 | STP configuration and root bridge control | Root election, STP timers, loop test |
 | Feb 1 | Firewall segmentation | pfSense rules, VLAN isolation enforcement |
+| Jul 14 | Firewall rules / ACLs | VLAN20_TEST firewall rules on pfSense |
+| Jul 15 | Port security | Switch port security configuration and testing |
+| Jul 19 | LibreNMS deployment | Docker/Colima, SNMP polling, Discord alerting |
+| Jul 25 | SNMP trap forwarding, port hardening, alert tuning | Trap receiver config, unused port disable, LibreNMS ignore-tags, switch clock fix |
 
 ---
 
@@ -125,13 +137,15 @@ ccna-homelab/
 - PVST+ and Rapid-PVST+ — per-VLAN STP instances, load balancing
 - STP Guard Features — PortFast, BPDU Guard, Root Guard, Loop Guard, BPDU Filter
 - pfSense — VLAN interfaces, DHCP server, firewall rules, NAT
+- Port Security — intrusion alerts, MAC-based restrictions
+- SNMP — polling, trap forwarding, event levels, network monitoring (LibreNMS)
 
 ## Topics Still Ahead
 
 - IP addressing and subnetting
 - IPv6
 - Routing protocols — OSPF, static routes, administrative distance
-- ACLs
+- ACLs (extended)
 - NAT
 - DHCP on Cisco IOS
 - Wireless networking
@@ -148,7 +162,7 @@ Full write-ups in [`mistakes-and-lessons.md`](./mistakes-and-lessons.md). Short 
 - **pfSense installer loop** — repeated cycling through installer screens was VMware adapter instability, not pfSense misconfiguration. Changing adapter modes mid-install made it worse.
 - **Trying to route before securing management access** — pfSense LAN set to VLAN 99 subnet while iMac was on ISP subnet with no path between them. Couldn't reach WebGUI to fix it.
 - **Single NIC architecture constraint** — discovered that a VM router cannot share one physical NIC between untagged management traffic and a tagged VLAN trunk. Required adding a USB Ethernet adapter as a dedicated trunk interface.
-
----
-
-*CCNA Home Lab · January–February 2026*
+- **Stuck screen sessions locking the console port** — killing a `screen` session by closing the terminal instead of exiting properly left root-owned sessions stacked up, eventually locking the serial port with a `Resource busy` error.
+- **SFP slots don't take standard port-disable syntax** — ports 25-26 on the 2524 are transceiver slots, not copper, and reject bulk `interface disable` commands the same way the other 24 ports accept them.
+- **Disabling a port on the switch doesn't stop LibreNMS from alerting on it** — needed the separate `Ignore alert tag` toggle per port in LibreNMS to actually quiet a stale, days-old "port down" alert.
+- **Switch clock has no persistent save** — `write memory` doesn't cover the clock; `reload`/`boot` always resets it back to January 1990 regardless.
