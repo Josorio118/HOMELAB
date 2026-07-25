@@ -47,7 +47,7 @@ Moved the laptop to Port 11 (VLAN 20, access mode), confirmed it pulled 192.168.
  
 **Verified in Wireshark**, captured live on the laptop's own interface, filtered to `icmp && ip.addr==192.168.10.1` — clean echo request/reply pairs the whole way through, confirming the permit rule takes effect exactly where expected.
 
-## 07/25/2026
+## 2026-07-25 
  
 - SNMP trap receiver added on ProCurve (`snmp-server host public <iMac-VLAN99-IP> critical`) -> verified live via port 11 flap test
 - Ports 1-4, 6-9, 12-24 administratively disabled on ProCurve; ports 5, 10, 11 left active; `write memory` saved
