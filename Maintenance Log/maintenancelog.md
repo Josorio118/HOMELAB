@@ -46,3 +46,11 @@ Moved the laptop to Port 11 (VLAN 20, access mode), confirmed it pulled 192.168.
 **Added a permit rule above the block rule**: pass, ICMP, any subtype, same source/destination. Re-tested: 0% loss again, but only for ICMP — everything else stays blocked by the rule below it.
  
 **Verified in Wireshark**, captured live on the laptop's own interface, filtered to `icmp && ip.addr==192.168.10.1` — clean echo request/reply pairs the whole way through, confirming the permit rule takes effect exactly where expected.
+
+## 07/25/2026
+ 
+- SNMP trap receiver added on ProCurve (`snmp-server host public <iMac-VLAN99-IP> critical`) -> verified live via port 11 flap test
+- Ports 1-4, 6-9, 12-24 administratively disabled on ProCurve; ports 5, 10, 11 left active; `write memory` saved
+- LibreNMS: `Ignore alert tag` set ON for all disabled ports under the ProCurve device; left OFF for ports 10 and 11
+- Cleared intrusion alarm on port 10 (`clear intrusion`)
+- Switch clock manually set (`time 14:44:20 07/25/26`), timezone set to 240 min / continental-us-and-canada DST rule -> note: will reset to default on next reboot, needs manual reset until a real time source is configured
