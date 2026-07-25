@@ -34,7 +34,7 @@ pfSense LAN (em0) — 802.1Q Trunk
 HP ProCurve 2524 — Port 5 (Trunk)
     |__________________________|_________________________|
     |                          |                         |
-Port 3 (ISP uplink)     Port 4 (MGMT/VLAN 99)    Port 10/11 (VLAN 10/20)
+Port 3 (ISP uplink)     Port 5 (MGMT/VLAN 99)    Port 10/11 (VLAN 10/20)
 ```
 
 ### VLAN Design
