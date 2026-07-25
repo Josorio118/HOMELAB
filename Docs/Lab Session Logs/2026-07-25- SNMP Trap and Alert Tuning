@@ -4,7 +4,7 @@ Picked this up to finish the last open item from the LibreNMS monitoring stack b
  
 **What Was Done**
  
-- Connected to the ProCurve via console (`screen /dev/cu.usbserial-BG02PTTE 9600`) -> hit `Resource busy` from six stacked, detached `sudo screen` sessions left over from earlier troubleshooting. Killed them all with `sudo screen -X -S <name> quit`, confirmed clean with `sudo screen -ls`, reconnected fine.
+- Connected to the ProCurve via console -> hit `Resource busy` from six stacked, detached `sudo screen` sessions left over from earlier troubleshooting. Killed them all with `sudo screen -X -S <name> quit`, confirmed clean with `sudo screen -ls`, reconnected fine.
 - Grabbed the iMac's VLAN 99 IP, added the trap receiver:
 ```
   snmp-server host public <iMac-VLAN99-IP> critical
