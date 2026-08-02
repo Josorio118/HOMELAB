@@ -149,9 +149,7 @@ The device got no DHCP lease (fell back to a self-assigned 169.254 address), the
  
 Lesson: on ProCurve, "Action" controls the response to a violation (port disable, trap, alarm), not whether the violation is actually blocked. The blocking is automatic and happens regardless of Action, as long as learn-mode and address-limit are configured. Don't assume "Action: None" means "no security," it means "no extra response."
 ### 2026-07-19
-## 11
- 
-### MariaDB won't start in Docker on macOS if you bind-mount the data directory
+## 11. MariaDB won't start in Docker on macOS if you bind-mount the data directory
  
 Kept getting `librenms_db` stuck in a crash loop. Logs said:
 ```
@@ -175,15 +173,11 @@ volumes:
  
 `docker compose down && docker compose up -d` after that and it came up clean on the first try.
  
-## 12
- 
-### Docker Desktop won't install on macOS 13, Colima is the real fix not a workaround
+## 12. Docker Desktop won't install on macOS 13, Colima is the real fix not a workaround
  
 Tried `brew install --cask docker-desktop` on the iMac and got a flat error -> Docker Desktop requires Sonoma (14) or newer, no way around it on macOS 13.7. Went with Colima instead (`brew install docker docker-compose colima` then `colima start`), which spins up a small Linux VM and gives you a real `docker`/`docker compose` CLI. Wasn't sure at first if this was some sketchy workaround, but it's a legit, actively maintained, Homebrew-official tool -> the standard recommendation for exactly this situation.
  
-## 13
- 
-### Switch had no IP on any VLAN this whole time
+## 13. Switch had no IP on any VLAN this whole time
  
 Went to add the ProCurve to LibreNMS and needed its management IP. Ran `show management` on the switch and every single VLAN showed "Disabled" under IP Config -> the switch never actually had a network-reachable address, only console/serial access this entire project. Assigned one on VLAN XX:
 ```
@@ -193,22 +187,32 @@ ip address 192.168.XXX.XXX 255.255.255.0
 Lesson: don't assume SNMP/reachability problems are a firewall or community-string issue before confirming the device actually has an IP assigned on the interface you're trying to reach it on.
 
 ### 2026-07-25
-## 14
+## 14. Killing a `screen` session by closing the window instead of exiting it properly locks the serial port
 
 Killing a `screen` session by just closing the terminal window instead of a proper `Ctrl-A` `k` / exit can leave the serial port locked at the OS level. On macOS, `sudo screen` sessions are owned by root and won't show up in a plain `screen -ls` -> use `sudo screen -ls` to actually see them. Six of these had stacked up unnoticed across earlier sessions, and one was the actual cause of a `Resource busy` / `ioctl TIOCEXCL failed` error when trying to reconnect to the switch console.
 
-## 15
+## 15. SFP slots 25-26 aren't standard ports and break bulk port-range commands
 
 Ports 25-26 on the ProCurve 2524 are the SFP transceiver slots, not standard copper ports -> they reject the standard `interface disable` syntax used on the other 24 ports. Exclude them from bulk port-range commands (e.g. `interface 1-4,6-9,12-24 disable`, not `1-26`).
 
-## 16
+## 16. Disabling a port doesn't stop LibreNMS from alerting on it
 
 Disabling a port on the switch (`Admin: down`) does not stop LibreNMS from polling and alerting on it. LibreNMS has a separate `Ignore alert tag` toggle per port (Device Settings -> Port Settings) that has to be explicitly set to ON for ports you've intentionally shut down -> otherwise a stale "port down" alert can sit open indefinitely and eventually deliver a delayed Discord notification once the queue reprocesses.
 
-## 17
+## 17. Set the ProCurve's timezone before setting the clock, not after
 
 The ProCurve's `time` command sets the *local* clock, but the switch stores time internally and applies the configured timezone offset on top of whatever you enter. Setting the clock before setting the timezone means the displayed time will shift once the offset is applied afterward -> set `time timezone` first, then set the clock, not the other way around.
 
-## 18
+## 18. The ProCurve's clock resets on every reboot -> there's no `write memory` for it
 
 There is no `write memory` equivalent for the ProCurve's clock. `reload` or `boot` resets the time back to the January 1990 default regardless of any other saved config -> the clock has to be manually reset after every reboot/power cycle unless a working Timep source is configured. `ip timep dhcp` alone won't work unless the DHCP server is actually configured to hand out a Timep server address, and pfSense's NTP service isn't the same protocol as the ProCurve's Timep client.
+
+### 2026-08-02
+
+## 19. A missing static route doesn't just drop traffic -> it can fall through to the default route and leave the network
+
+During the static routing lab, I deleted the static route to a phantom subnet to test the "break" step and expected the ping to just time out locally. Instead, after a few silent timeouts, I got back an explicit ICMP reply from `96.120.64.161` -> Comcast/Xfinity edge equipment -> saying "Communication prohibited by filter."
+
+Diagnosis: with the specific static route gone, pfSense still had its default route (`0.0.0.0/0 -> 10.0.0.1`, the ISP gateway). No matching specific route means the packet doesn't just get dropped -> it falls through to whatever *does* match, which was the default route. So traffic destined for a fake internal subnet actually left my network, hit my ISP's equipment, and got rejected out there instead of failing safely at home.
+
+Lesson: "no route" isn't automatically "packet dropped." If a default route exists, traffic without a more specific match will ride the default route wherever it goes -> including out to the internet if that's what the default route points to. Route precedence (specific > default) determines the path, not just whether a path exists. Worth remembering for any future ACL/routing lab: a missing specific route can leak traffic externally rather than fail closed, if a default route is sitting there ready to catch it.
