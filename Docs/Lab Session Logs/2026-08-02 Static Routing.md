@@ -1,4 +1,4 @@
-# Static Routing Lab -> Phantom Subnet via VLAN 20
+# Static Routing Lab     Phantom Subnet via VLAN 20
 
 Single-router topology (pfSense as the only L3 hop) means there's no real second router to point a static route at yet -> that's hardware-blocked until the second switch/hypervisor situation gets sorted. Worked around it by turning a VLAN 20 host into a fake next-hop so I could still run a real verify/break/restore cycle.
 
