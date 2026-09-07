@@ -216,3 +216,42 @@ During the static routing lab, I deleted the static route to a phantom subnet to
 Diagnosis: with the specific static route gone, pfSense still had its default route (`0.0.0.0/0 -> 10.0.0.1`, the ISP gateway). No matching specific route means the packet doesn't just get dropped -> it falls through to whatever *does* match, which was the default route. So traffic destined for a fake internal subnet actually left my network, hit my ISP's equipment, and got rejected out there instead of failing safely at home.
 
 Lesson: "no route" isn't automatically "packet dropped." If a default route exists, traffic without a more specific match will ride the default route wherever it goes -> including out to the internet if that's what the default route points to. Route precedence (specific > default) determines the path, not just whether a path exists. Worth remembering for any future ACL/routing lab: a missing specific route can leak traffic externally rather than fail closed, if a default route is sitting there ready to catch it.
+
+### 2026-09-07
+## WAN getting .99 address / full outage -> em0/em1 swap + SW2/SW3 integration
+
+### Symptom
+pfSense WAN was pulling a DHCP lease in the 192.168.99.x range instead of a real Xfinity address. LAN side looked fine (USB adapter had its normal 192.168.99.100), but nothing upstream worked -> no internet, LibreNMS unreachable, alerting dead. This had actually been broken since 08/21 (2w3d per LibreNMS "device recovered" timestamp), not something that started today -> today was just when it got chased down.
+
+### Where I went wrong troubleshooting
+Spent a long time re-checking things that were already confirmed instead of moving to new data -> re-verified "Connect Network Adapter" checkbox, adapter bridge target, and cable seating multiple times after they'd already been confirmed correct. Should've gone straight to hard evidence (Wireshark MAC filtering, .vmx file, networking prefs file) instead of clicking through the same GUI panels over and over.
+
+### Root cause
+Found by reading the actual config files instead of trusting the GUI:
+- `/Library/Preferences/VMware Fusion/networking` confirmed vmnet4 -> en0 (Ethernet 1/WAN-side) and vmnet5 -> en4 (USB adapter/LAN-side) -> bridge mappings themselves were correct.
+- The `.vmx` file (`grep -E "ethernet[0-1]\.(connectionType|vnet|virtualDev)"`) showed `ethernet0.vnet = "vmnet4"` and `ethernet1.vnet = "vmnet5"` -> meaning **em0 is physically wired to WAN-side (Ethernet 1)** and **em1 is physically wired to LAN-side (USB adapter)**.
+- But pfSense's interface assignment had it backwards this whole time -> WAN assigned to em1 (actually the USB/LAN path) and LAN assigned to em0 (actually the WAN/Xfinity path). Confirmed with Wireshark: filtered em1's MAC (`00:0c:29:4b:7f:b3`) on both en0 and en4 captures and got zero hits on either -> proved em1 wasn't transmitting on any bridge Fusion's GUI claimed, which is what led to pulling the raw config files instead of trusting the panels.
+
+Likely cause of the original swap: sometime during earlier interface reassignment/reboot cycles, pfSense's `assign interfaces` picked up em0/em1 in the opposite order from what the vmnet mapping actually wires to.
+
+### Fix
+Console menu -> option 1 (Assign Interfaces) -> skipped VLAN setup (n, since 10/20/99 VLANs already existed as children of em0) -> assigned WAN = em0, LAN = em1. Confirmed on reload: WAN pulled a real DHCP4 lease (10.0.0.246/24) from the Xfinity gateway. LAN came back up on 192.168.99.1/24 as expected.
+
+### Also found and fixed during today's session
+- A stray `vmnet2` custom network (isolated, 172.16.246.0/24, own DHCP) existed in Fusion's Preferences -> Network under Custom. Not bridged to anything real, likely leftover from earlier troubleshooting. Deleted it since it was a candidate for the LAN adapter accidentally binding to it instead of the real USB bridge.
+- USB passthrough got accidentally enabled on the Realtek USB 10/100/1000 LAN adapter (VM Settings -> USB) at one point, which detached it from macOS entirely (`ure0: detached` in console) and knocked "Connect Network Adapter" back to unchecked on Adapter 2. Unchecked the USB passthrough box, adapter re-attached (`ure0: <Realtek...> on uhub` reappeared) after replug.
+
+### SW3 trunk (Port 7) VLAN 99 tag/untag mismatch
+Once WAN/LAN was fixed and SW3 got physically cabled into ProCurve Port 7, ping to pfSense (192.168.99.1) failed even with link up on both ends. `show vlan 99` on the ProCurve showed Port 7 as **Tagged** for VLAN 99, but SW3's Fa0/1 trunk config uses `switchport trunk native vlan 99` -> meaning SW3 sends VLAN 99 untagged. Mismatch dropped/misclassified the untagged frames arriving on a port that expected them tagged.
+
+Fix: `vlan 99` -> `untagged 7` on the ProCurve, matching how Port 1 (SW2) and Port 5 (pfSense) already had it. Ping succeeded immediately after (100% success, SW3 -> pfSense and SW3 -> SW2).
+
+### Switch fabric integration completed today
+- ProCurve Port 7 -> SW3 trunk (native 99, tagged 10/20/30) -> confirmed up, VLAN mismatch fixed, ping to pfSense and SW2 both 100%.
+- ProCurve Port 1 -> SW2 trunk -> confirmed up, ping to SW3 succeeded (192.168.99.28).
+- ProCurve Ports 8/9 -> staged for R1/R2 (VLAN 30 LAB_ROUTERS, untagged) -> enabled and VLAN-assigned, not yet cabled in.
+- SNMP RO community `public` added to SW3 (SW2 presumably already had it from an earlier session -> confirm next time).
+- Both SW2 (192.168.99.28) and SW3 (192.168.99.29) added to LibreNMS as SNMP v2c/UDP devices -> polling confirmed working across storage, memory, processor, and health sensor categories.
+
+### Lesson
+When GUI panels and console banners keep contradicting each other, stop clicking through settings screens and go straight to the underlying config files (`.vmx`, Fusion's `networking` prefs file) and packet-level evidence (Wireshark MAC filtering) -> these gave a definitive, unambiguous answer in two commands after a long stretch of re-checking the same GUI state repeatedly.
