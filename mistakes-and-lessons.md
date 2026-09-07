@@ -218,7 +218,7 @@ Diagnosis: with the specific static route gone, pfSense still had its default ro
 Lesson: "no route" isn't automatically "packet dropped." If a default route exists, traffic without a more specific match will ride the default route wherever it goes -> including out to the internet if that's what the default route points to. Route precedence (specific > default) determines the path, not just whether a path exists. Worth remembering for any future ACL/routing lab: a missing specific route can leak traffic externally rather than fail closed, if a default route is sitting there ready to catch it.
 
 ### 2026-09-07
-## WAN getting .99 address / full outage -> em0/em1 swap + SW2/SW3 integration
+## 20. WAN getting .99 address / full outage -> em0/em1 swap + SW2/SW3 integration
 
 ### Symptom
 pfSense WAN was pulling a DHCP lease in the 192.168.99.x range instead of a real Xfinity address. LAN side looked fine (USB adapter had its normal 192.168.99.100), but nothing upstream worked -> no internet, LibreNMS unreachable, alerting dead. This had actually been broken since 08/21 (2w3d per LibreNMS "device recovered" timestamp), not something that started today -> today was just when it got chased down.
